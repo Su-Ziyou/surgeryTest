@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>测试控制界面</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f6f8;
+      padding: 2rem;
+    }
+    h2 {
+      text-align: center;
+    }
+    .group-selector, .image-display, .controls, .upload-box {
+      max-width: 800px;
+      margin: 1rem auto;
+      background: #fff;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 1rem;
+    }
+    .group-checkboxes label {
+      display: inline-block;
+      margin-right: 1rem;
+    }
+    .image-display img {
+      max-width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      margin-top: 1rem;
+    }
+    .controls button, .upload-box button {
+      margin: 0.5rem 0;
+      padding: 0.6rem 1.2rem;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .send-btn { background: #28a745; color: white; }
+    .correct-btn { background: #007bff; color: white; }
+    .wrong-btn { background: #dc3545; color: white; }
+    .next-btn { background: #6c757d; color: white; }
+    .upload-box { margin-top: 2rem; }
+    .upload-box input, .upload-box select {
+      width: 100%;
+      padding: 0.4rem;
+      margin-top: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+  </style>
+  <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"></script>
+</head>
+<body>
+  <h2>测试控制界面</h2>
+
+  <div class="group-selector">
+    <label>选择图片组（可多选）：</label>
+    <div class="group-checkboxes">
+      <label><input type="checkbox" name="group" value="group1"> 组1</label>
+      <label><input type="checkbox" name="group" value="group2"> 组2</label>
+      <label><input type="checkbox" name="group" value="group3"> 组3</label>
+      <label><input type="checkbox" name="group" value="group4"> 组4</label>
+    </div>
+    <button onclick="loadImages()">加载图片</button>
+  </div>
+
+  <div class="image-display">
+    <div id="image-path">图片路径：</div>
+    <img id="current-image" src="" alt="当前图片">
+  </div>
+
+  <div class="controls">
+    <button class="send-btn" onclick="sendImage()">发送图片</button>
+    <button class="correct-btn" onclick="markAnswer(true)">正确</button>
+    <button class="wrong-btn" onclick="markAnswer(false)">错误</button>
+    <button class="next-btn" onclick="nextImage()">下一张</button>
+    <div id="status"></div>
+  </div>
+
+  <div class="upload-box">
+    <h3>上传图片到指定组</h3>
+    <form id="uploadForm">
+      <label>选择已有组（可选）</label>
+      <select name="group">
+        <option value="">--选择组--</option>
+        <option value="group1">组1</option>
+        <option value="group2">组2</option>
+        <option value="group3">组3</option>
+      </select>
+
+      <label>或输入新组名</label>
+      <input type="text" name="new_group" placeholder="如：新建组A">
+
+      <label>选择图片（可多选，最大4MB）</label>
+      <input type="file" name="images" multiple accept="image/*">
+
+      <button type="submit">上传</button>
+      <div id="uploadStatus"></div>
+    </form>
+  </div>
+
+  <script>
+    const socket = io();
+    let imageList = [];
+    let currentIndex = 0;
+    let startTime = null;
+    let imageSent = false;
+
+    async function loadImages() {
+      const checkboxes = document.querySelectorAll("input[name='group']:checked");
+      const selectedGroups = Array.from(checkboxes).map(cb => cb.value);
+
+      if (selectedGroups.length === 0) {
+        alert("请至少选择一个图片组！");
+        return;
+      }
+
+      const res = await fetch('/api/images', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groups: selectedGroups })
+      });
+
+      const result = await res.json();
+      imageList = result.images || [];
+      currentIndex = 0;
+
+      if (imageList.length === 0) {
+        alert("所选组中没有可用图片");
+      } else {
+        updateImage();
+      }
+    }
+
+    function updateImage() {
+      if (imageList.length === 0) return;
+      document.getElementById('current-image').src = imageList[currentIndex];
+      document.getElementById('image-path').innerText = imageList[currentIndex];
+      imageSent = false;
+      startTime = null;
+      document.getElementById('status').innerText = '';
+    }
+
+    function sendImage() {
+      if (imageList.length === 0) return;
+      const path = imageList[currentIndex];
+      socket.emit('send_image', { image_path: path });
+      startTime = new Date();
+      imageSent = true;
+      document.getElementById('status').innerText = "图片已发送，等待回答...";
+    }
+
+    function markAnswer(correct) {
+      if (!imageSent || !startTime) {
+        alert("请先点击『发送图片』再记录答案！");
+        return;
+      }
+
+      const endTime = new Date();
+      const timeUsed = ((endTime - startTime) / 1000).toFixed(2);
+      const path = imageList[currentIndex];
+
+      socket.emit('answer_complete', {
+        image: path,
+        correct: correct,
+        reaction_time: timeUsed
+      });
+
+      document.getElementById('status').innerText = `已记录：${correct ? '正确' : '错误'}，耗时 ${timeUsed} 秒`;
+      startTime = null;
+      imageSent = false;
+    }
+
+    function nextImage() {
+      if (currentIndex < imageList.length - 1) {
+        currentIndex++;
+        updateImage();
+      } else {
+        alert("已到最后一张图片");
+      }
+    }
+
+    document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const form = e.target;
+      const formData = new FormData(form);
+      const files = form.elements['images'].files;
+      for (let file of files) {
+        if (file.size / 1024 > 4096) {
+          alert(`文件 ${file.name} 超过 4096KB 限制`);
+          return;
+        }
+      }
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      const result = await res.json();
+      document.getElementById('uploadStatus').innerText = result.message || result.error || '未知状态';
+    });
+  </script>
+</body>
+</html>

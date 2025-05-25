@@ -1,0 +1,123 @@
+<!-- templates/patient_info.html -->
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>填写患者信息</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f8f9fa;
+      padding: 2rem;
+    }
+    form {
+      max-width: 600px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    label {
+      display: block;
+      margin-top: 1rem;
+      font-weight: bold;
+    }
+    input, select {
+      width: 100%;
+      padding: 8px;
+      margin-top: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      margin-top: 2rem;
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0069d9;
+    }
+  </style>
+</head>
+<body>
+  <form method="post" action="">
+    <h2>填写患者信息</h2>
+
+    <label>姓名</label>
+    <label>
+      <input type="text" name="name" required>
+    </label>
+
+    <label>性别</label>
+    <label>
+      <input type="text" name="sex" required>
+    </label>
+
+    <label>年龄</label>
+    <label>
+      <input type="number" name="age" required>
+    </label>
+
+    <label>住院号</label>
+    <label>
+      <input type="text" name="hospital_id" required>
+    </label>
+
+    <label>肿瘤位置</label>
+    <label>
+      <input type="text" name="tumor_location" required>
+    </label>
+
+    <label>手术方式</label>
+    <label>
+      <input type="text" name="surgery_type">
+    </label>
+
+    <label>术者</label>
+    <label>
+      <input type="text" name="surgeon">
+    </label>
+
+    <label>手术时间</label>
+    <label>
+      <input type="datetime-local" name="surgery_time">
+    </label>
+
+    <label>测试阶段</label>
+    <label for="phase-select"></label><select name="phase" id="phase-select" onchange="toggleStimLocation()">
+      <option value="术前">术前</option>
+      <option value="术中">术中</option>
+      <option value="术后">术后</option>
+    </select>
+
+    <div id="stim-location-div" style="display:none;">
+      <label>术中刺激部位</label>
+      <label>
+        <select name="stim_location">
+          <option value="">请选择部位</option>
+          <option value="位置1">位置1</option>
+          <option value="位置2">位置2</option>
+          <option value="位置3">位置3</option>
+        </select>
+      </label>
+    </div>
+
+    <button type="submit">下一步</button>
+  </form>
+
+  <script>
+    function toggleStimLocation() {
+      const phase = document.getElementById("phase-select").value;
+      const stimDiv = document.getElementById("stim-location-div");
+      stimDiv.style.display = (phase === "术中") ? "block" : "none";
+    }
+  </script>
+</body>
+</html>

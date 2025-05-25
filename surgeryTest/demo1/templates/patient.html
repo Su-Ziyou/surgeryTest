@@ -1,0 +1,36 @@
+<!-- templates/patient.html -->
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>病人显示界面</title>
+  <style>
+    body {
+      margin: 0;
+      background-color: black;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    img {
+      max-width: 90vw;
+      max-height: 90vh;
+    }
+  </style>
+  <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"></script>
+</head>
+<body>
+  <img id="displayImage" src="" alt="等待图片...">
+
+  <script>
+    const socket = io();
+    const img = document.getElementById('displayImage');
+
+    socket.on('display_image', function(data) {
+      img.src = data.image_path;
+      console.log("接收到图片:", data.image_path);
+    });
+  </script>
+</body>
+</html>

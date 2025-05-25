@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>上传测试图片</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 2rem; background: #eef2f6; }
+    .container { max-width: 800px; margin: auto; background: #fff; padding: 2rem; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    h2 { text-align: center; margin-bottom: 2rem; }
+    label { font-weight: bold; display: block; margin: 1rem 0 0.5rem; }
+    input, select, button { width: 100%; padding: 0.5rem; margin-bottom: 1rem; border-radius: 5px; border: 1px solid #ccc; }
+    button { background: #007bff; color: white; font-size: 16px; cursor: pointer; }
+    .image-list { margin-top: 2rem; }
+    .image-item { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; border-bottom: 1px solid #eee; }
+    .image-item img { height: 60px; margin-right: 1rem; }
+    .image-item button { background: #dc3545; color: white; padding: 0.3rem 0.7rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>上传与管理测试图片</h2>
+
+    <form id="uploadForm">
+      <label>选择已有组（可选）</label>
+      <select name="group">
+        <option value="">--选择组--</option>
+        <option value="group1">组1</option>
+        <option value="group2">组2</option>
+        <option value="group3">组3</option>
+      </select>
+
+      <label>或新建图片组</label>
+      <input type="text" name="new_group" placeholder="如：新建组A">
+
+      <label>选择图片（支持多选，最大4MB）</label>
+      <input type="file" name="images" multiple accept="image/*">
+
+      <button type="submit">上传图片</button>
+      <div id="uploadStatus"></div>
+    </form>
+
+    <div class="image-list">
+      <label>选择查看组：</label>
+      <select id="viewGroup" onchange="loadGroupImages()">
+        <option value="">--选择组--</option>
+        <option value="group1">组1</option>
+        <option value="group2">组2</option>
+        <option value="group3">组3</option>
+      </select>
+      <div id="imageList"></div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const form = e.target;
+      const formData = new FormData(form);
+      const files = form.elements['images'].files;
+
+      for (let file of files) {
+        if (file.size / 1024 > 4096) {
+          alert(`文件 ${file.name} 超过 4MB 限制`);
+          return;
+        }
+      }
+
+      const res = await fetch('/api/image-upload', { method: 'POST', body: formData });
+      const result = await res.json();
+      document.getElementById('uploadStatus').innerText = result.message || result.error;
+      loadGroupImages();
+    });
+
+    async function loadGroupImages() {
+      const group = document.getElementById('viewGroup').value;
+      if (!group) return;
+
+      const res = await fetch(`/api/images/group?name=${group}`);
+      const images = await res.json();
+      const list = document.getElementById('imageList');
+      list.innerHTML = '';
+      for (let img of images) {
+        const div = document.createElement('div');
+        div.className = 'image-item';
+        div.innerHTML = `
+          <img src="${img}" alt="图像">
+          <button onclick="deleteImage('${img}')">删除</button>
+        `;
+        list.appendChild(div);
+      }
+    }
+
+    async function deleteImage(path) {
+      if (!confirm('确定删除这张图片？')) return;
+      const res = await fetch('/api/image-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path })
+      });
+      const result = await res.json();
+      alert(result.message || result.error);
+      loadGroupImages();
+    }
+  </script>
+</body>
+</html>
